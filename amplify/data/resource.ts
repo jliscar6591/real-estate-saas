@@ -14,12 +14,12 @@ const schema = a.schema({
   Chat: a.model({
     name: a.string(),
     message: a.hasMany('Message', 'chatId'),
-  }),
+  }).authorization(allow => [allow.owner()]),
   Message: a.model({
     text: a.string(),
     chat: a.belongsTo('Chat', 'chatId'),
     chatId: a.id()
-  }),
+  }).authorization(allow => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
