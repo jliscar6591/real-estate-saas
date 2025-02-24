@@ -2,20 +2,27 @@ import React, { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { useAuthenticator } from "@aws-amplify/ui-react";
+import { Authenticator } from "@aws-amplify/ui-react";
+import { Amplify } from "aws-amplify";
+import outputs from "../amplify_outputs.json";
 
-// Import react-router-dom components for routing
+import "@aws-amplify/ui-react/styles.css";
+
+Amplify.configure(outputs);
+
+// React Router imports
 import {
   BrowserRouter,
   Routes,
   Route,
   useNavigate,
+  useLocation, // Added for selected state
 } from "react-router-dom";
 
 // MUI components and icons
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 import {
   CssBaseline,
-  AppBar,
   Toolbar,
   Typography,
   Container,
@@ -29,119 +36,234 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Avatar,
+  ListItemButton, // Added for avatar
 } from "@mui/material";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ChatIcon from "@mui/icons-material/Chat";
+import HomeIcon from "@mui/icons-material/Home"; // Added for avatar icon
+import { getTheme } from "./theme";
 import ClientManagement from "./Components/ClientsComponent";
 import ChatWithClient from "./Components/ChatComponent";
 
-// Generate the Amplify Data client using your schema
 const client = generateClient<Schema>();
 
-// Define a type alias for the Chat record returned by the create method
 type ChatRecord = Awaited<ReturnType<typeof client.models.Chat.create>>;
 
-/*────────────────────────────
-  Layout Component
-────────────────────────────*/
-// This component provides the AppBar at the top, a persistent Drawer (sidebar),
-// and a main content area where child routes are rendered.
+/** Layout Component */
 function Layout({ children }: { children: React.ReactNode }) {
-  // Local state for dark/light mode
   const [darkMode, setDarkMode] = useState(false);
-  const theme = createTheme({
-    palette: {
-      mode: darkMode ? "dark" : "light",
-    },
-  });
-
-  // useNavigate hook to programmatically navigate
+  const theme = getTheme(darkMode);
   const navigate = useNavigate();
+  const location = useLocation(); // Get current route for selected state
 
-  // Toggle dark/light theme
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
+  const formFields = {
+    signIn: {
+      username: {
+        label: "Email Address",
+        placeholder: "Enter your email",
+        order: 1,
+      },
+      password: {
+        label: "Password",
+        placeholder: "Enter your password",
+        order: 2,
+      },
+    },
+    signUp: {
+      email: {
+        label: "Email",
+        placeholder: "Your email address",
+        order: 1,
+      },
+      password: {
+        label: "Password",
+        placeholder: "Create a password",
+        order: 2,
+      },
+      confirm_password: {
+        label: "Confirm Password",
+        order: 3,
+      },
+    },
+  };
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {/* AppBar at the top */}
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Amplify App
-          </Typography>
-          <IconButton color="inherit" onClick={toggleDarkMode}>
-            {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+    <Authenticator formFields={formFields} initialState="signIn">
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {/* Sidebar Navigation */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: 240,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box" },
+          }}
+        >
+          <Toolbar>
+            <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+              <Avatar sx={{ mr: 1 }}>
+                <HomeIcon />
+              </Avatar>
+              <Typography sx={{width: 'fit-content'}}>Real Estate SaaS</Typography>
+            </Box>
+            <IconButton color="inherit" onClick={toggleDarkMode}>
+              {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Toolbar>
+          <Box sx={{ overflow: "auto" }}>
+            <List>
+              <ListItem
+                key="home"
+              >
+                <ListItemButton selected={location.pathname === "/home"} onClick={() => navigate("/home")}>
+                  <ListItemIcon>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M9 21V13.6C9 13.0399 9 12.7599 9.109 12.546C9.20487 12.3578 9.35785 12.2049 9.54601 12.109C9.75993 12 10.04 12 10.6 12H13.4C13.9601 12 14.2401 12 14.454 12.109C14.6422 12.2049 14.7951 12.3578 14.891 12.546C15 12.7599 15 13.0399 15 13.6V21M2 9.5L11.04 2.72C11.3843 2.46181 11.5564 2.33271 11.7454 2.28294C11.9123 2.23902 12.0877 2.23902 12.2546 2.28295C12.4436 2.33271 12.6157 2.46181 12.96 2.72L22 9.5M4 8V17.8C4 18.9201 4 19.4802 4.21799 19.908C4.40974 20.2843 4.7157 20.5903 5.09202 20.782C5.51985 21 6.0799 21 7.2 21H16.8C17.9201 21 18.4802 21 18.908 20.782C19.2843 20.5903 19.5903 20.2843 19.782 19.908C20 19.4802 20 18.9201 20 17.8V8L13.92 3.44C13.2315 2.92361 12.8872 2.66542 12.5091 2.56589C12.1754 2.47804 11.8246 2.47804 11.4909 2.56589C11.1128 2.66542 10.7685 2.92361 10.08 3.44L4 8Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </ListItemIcon>
+                  <ListItemText primary="Home" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem
+                key="dashboard"
+              >
+                <ListItemButton selected={location.pathname === "/agent/dashboard"}
+                  onClick={() => navigate("/agent/dashboard")}>
+                  <ListItemIcon>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M8.4 3H4.6C4.03995 3 3.75992 3 3.54601 3.10899C3.35785 3.20487 3.20487 3.35785 3.10899 3.54601C3 3.75992 3 4.03995 3 4.6V8.4C3 8.96005 3 9.24008 3.10899 9.45399C3.20487 9.64215 3.35785 9.79513 3.54601 9.89101C3.75992 10 4.03995 10 4.6 10H8.4C8.96005 10 9.24008 10 9.45399 9.89101C9.64215 9.79513 9.79513 9.64215 9.89101 9.45399C10 9.24008 10 8.96005 10 8.4V4.6C10 4.03995 10 3.75992 9.89101 3.54601C9.79513 3.35785 9.64215 3.20487 9.45399 3.10899C9.24008 3 8.96005 3 8.4 3Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M19.4 3H15.6C15.0399 3 14.7599 3 14.546 3.10899C14.3578 3.20487 14.2049 3.35785 14.109 3.54601C14 3.75992 14 4.03995 14 4.6V8.4C14 8.96005 14 9.24008 14.109 9.45399C14.2049 9.64215 14.3578 9.79513 14.546 9.89101C14.7599 10 15.0399 10 15.6 10H19.4C19.9601 10 20.2401 10 20.454 9.89101C20.6422 9.79513 20.7951 9.64215 20.891 9.45399C21 9.24008 21 8.96005 21 8.4V4.6C21 4.03995 21 3.75992 20.891 3.54601C20.7951 3.35785 20.6422 3.20487 20.454 3.10899C20.2401 3 19.9601 3 19.4 3Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M19.4 14H15.6C15.0399 14 14.7599 14 14.546 14.109C14.3578 14.2049 14.2049 14.3578 14.109 14.546C14 14.7599 14 15.0399 14 15.6V19.4C14 19.9601 14 20.2401 14.109 20.454C14.2049 20.6422 14.3578 20.7951 14.546 20.891C14.7599 21 15.0399 21 15.6 21H19.4C19.9601 21 20.2401 21 20.454 20.891C20.6422 20.7951 20.7951 20.6422 20.891 20.454C21 20.2401 21 19.9601 21 19.4V15.6C21 15.0399 21 14.7599 20.891 14.546C20.7951 14.3578 20.6422 14.2049 20.454 14.109C20.2401 14 19.9601 14 19.4 14Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8.4 14H4.6C4.03995 14 3.75992 14 3.54601 14.109C3.35785 14.2049 3.20487 14.3578 3.10899 14.546C3 14.7599 3 15.0399 3 15.6V19.4C3 19.9601 3 20.2401 3.10899 20.454C3.20487 20.6422 3.35785 20.7951 3.54601 20.891C3.75992 21 4.03995 21 4.6 21H8.4C8.96005 21 9.24008 21 9.45399 20.891C9.64215 20.7951 9.79513 20.6422 9.89101 20.454C10 20.2401 10 19.9601 10 19.4V15.6C10 15.0399 10 14.7599 9.89101 14.546C9.79513 14.3578 9.64215 14.2049 9.45399 14.109C9.24008 14 8.96005 14 8.4 14Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </ListItemIcon>
+                  <ListItemText primary="Dashboard" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem
+                key="clients"
+              >
+                <ListItemButton selected={location.pathname === "/agent/clients"}
+                  onClick={() => navigate("/agent/clients")}>
+                  <ListItemIcon>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M22 21V19C22 17.1362 20.7252 15.5701 19 15.126M15.5 3.29076C16.9659 3.88415 18 5.32131 18 7C18 8.67869 16.9659 10.1159 15.5 10.7092M17 21C17 19.1362 17 18.2044 16.6955 17.4693C16.2895 16.4892 15.5108 15.7105 14.5307 15.3045C13.7956 15 12.8638 15 11 15H8C6.13623 15 5.20435 15 4.46927 15.3045C3.48915 15.7105 2.71046 16.4892 2.30448 17.4693C2 18.2044 2 19.1362 2 21M13.5 7C13.5 9.20914 11.7091 11 9.5 11C7.29086 11 5.5 9.20914 5.5 7C5.5 4.79086 7.29086 3 9.5 3C11.7091 3 13.5 4.79086 13.5 7Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </ListItemIcon>
+                  <ListItemText primary="Clients" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem
+                key="chats"
+              >
+                <ListItemButton
+                  selected={location.pathname === "/agent/chats"}
+                  onClick={() => navigate("/agent/chats")}>
 
-      {/* Sidebar Navigation */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: 240,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box" },
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ overflow: "auto" }}>
-          <List>
-            {/* Navigate to Agent Dashboard */}
-            <ListItem onClick={() => navigate("/agent/dashboard")}>
-              <ListItemIcon>
-                <DashboardIcon />
-              </ListItemIcon>
-              <ListItemText primary="Dashboard" />
-            </ListItem>
-            <ListItem onClick={() => navigate("/agent/clients")}>
-              <ListItemIcon>
-                <DashboardIcon />
-              </ListItemIcon>
-              <ListItemText primary="Clients" />
-            </ListItem>
-            {/* Navigate to Home (Chat) */}
-            <ListItem onClick={() => navigate("/agent/chats")}>
-              <ListItemIcon>
-                <ChatIcon />
-              </ListItemIcon>
-              <ListItemText primary="Chat" />
-            </ListItem>
-          </List>
+                  <ListItemIcon>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M7 8.5H12M7 12H15M9.68375 18H16.2C17.8802 18 18.7202 18 19.362 17.673C19.9265 17.3854 20.3854 16.9265 20.673 16.362C21 15.7202 21 14.8802 21 13.2V7.8C21 6.11984 21 5.27976 20.673 4.63803C20.3854 4.07354 19.9265 3.6146 19.362 3.32698C18.7202 3 17.8802 3 16.2 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V20.3355C3 20.8684 3 21.1348 3.10923 21.2716C3.20422 21.3906 3.34827 21.4599 3.50054 21.4597C3.67563 21.4595 3.88367 21.2931 4.29976 20.9602L6.68521 19.0518C7.17252 18.662 7.41617 18.4671 7.68749 18.3285C7.9282 18.2055 8.18443 18.1156 8.44921 18.0613C8.74767 18 9.0597 18 9.68375 18Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </ListItemIcon>
+                  <ListItemText primary="Chat" />
+
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+        </Drawer>
+
+        {/* Main content area */}
+        <Box
+          component="main"
+          sx={{ flexGrow: 1, paddingLeft: 0, paddingTop: "20px", mt: 0 }}
+        >
+          {children}
         </Box>
-      </Drawer>
-
-      {/* Main content area */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, ml: 30, mt: 8 }}>
-        {children}
-      </Box>
-    </ThemeProvider>
+      </ThemeProvider>
+    </Authenticator>
   );
 }
 
-/*────────────────────────────
-  Home Component
-────────────────────────────*/
-// This component includes your Todo and Chat functionality.
-// Users can create a chat (if one doesn’t exist) and then send messages.
+/** Home Component */
 function Home() {
   const { user, signOut } = useAuthenticator();
-
-  // State for Todo items (optional)
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-  // State for Chat messages
   const [messages, setMessages] = useState<Array<Schema["Message"]["type"]>>([]);
-  // State for the Chat record; null until created
   const [chat, setChat] = useState<ChatRecord | null>(null);
-  // State for chat name input (for creating a new chat)
   const [chatName, setChatName] = useState("");
-  // State for new message text input
   const [messageText, setMessageText] = useState("");
 
-  // Subscribe to Todo items (optional)
   useEffect(() => {
     const subscription = client.models.Todo.observeQuery().subscribe({
       next: (data) => setTodos([...data.items]),
@@ -150,23 +272,17 @@ function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Subscribe to messages once a chat exists
   useEffect(() => {
-    console.log('chat being created', chat);
     if (!chat) return;
     const subscription = client.models.Message.observeQuery({
       filter: { and: [{ chatId: { eq: chat.id } }] },
     }).subscribe({
-      next: (data) => {
-        setMessages([...data.items]);
-      },
+      next: (data) => setMessages([...data.items]),
       error: (err) => console.error("Error observing messages:", err),
     });
-    
     return () => subscription.unsubscribe();
   }, [chat]);
 
-  // Create a new chat based on user input
   async function handleCreateChat() {
     if (!chatName.trim()) return;
     try {
@@ -177,7 +293,6 @@ function Home() {
     }
   }
 
-  // Create a new message in the current chat
   async function handleCreateMessage() {
     if (!chat) {
       console.error("Chat is not ready yet.");
@@ -195,27 +310,28 @@ function Home() {
     }
   }
 
-  // Optional: Create and delete todos
   function handleCreateTodo() {
     const content = window.prompt("Todo content");
-    if (content) {
-      client.models.Todo.create({ content });
-    }
+    if (content) client.models.Todo.create({ content });
   }
+
   function handleDeleteTodo(id: string) {
     client.models.Todo.delete({ id });
   }
 
   return (
-    <Container>
+    <Container sx={{ p: 0, ml: 0 }}>
       <Typography variant="h5" gutterBottom>
         Welcome, {user?.signInDetails?.loginId}
       </Typography>
-
-      {/* Todo Section (Optional) */}
       <Paper sx={{ p: 2, mb: 4 }}>
         <Typography variant="h6">Todo List</Typography>
-        <Button variant="contained" color="primary" onClick={handleCreateTodo} sx={{ mt: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleCreateTodo}
+          sx={{ mt: 2 }}
+        >
           + New Todo
         </Button>
         <List>
@@ -226,12 +342,9 @@ function Home() {
           ))}
         </List>
       </Paper>
-
-      {/* Chat Section */}
       <Paper sx={{ p: 2, mb: 4 }}>
         <Typography variant="h6">Chat</Typography>
         {!chat ? (
-          // Chat creation form: display if no chat exists yet
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <TextField
               label="Chat Name"
@@ -239,12 +352,15 @@ function Home() {
               onChange={(e) => setChatName(e.target.value)}
               variant="outlined"
             />
-            <Button variant="contained" color="primary" onClick={handleCreateChat}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleCreateChat}
+            >
               Create Chat
             </Button>
           </Box>
         ) : (
-          // Chat messages and message input: display once a chat has been created
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle1">Chat: {chat.name}</Typography>
             <List>
@@ -262,14 +378,17 @@ function Home() {
                 onChange={(e) => setMessageText(e.target.value)}
                 variant="outlined"
               />
-              <Button variant="contained" color="primary" onClick={handleCreateMessage}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCreateMessage}
+              >
                 Send Message
               </Button>
             </Box>
           </Box>
         )}
       </Paper>
-
       <Button variant="outlined" color="secondary" onClick={signOut}>
         Sign Out
       </Button>
@@ -277,10 +396,7 @@ function Home() {
   );
 }
 
-/*────────────────────────────
-  Dashboard Component
-────────────────────────────*/
-// A placeholder component for the Agent Dashboard page.
+/** Dashboard Component */
 function Dashboard() {
   return (
     <Container>
@@ -288,21 +404,20 @@ function Dashboard() {
         Agent Dashboard
       </Typography>
       <Typography>
-        This is the agent dashboard page. You can add your dashboard content here.
+        This is the agent dashboard page. You can add your dashboard content
+        here.
       </Typography>
     </Container>
   );
 }
 
-/*────────────────────────────
-  Main App Component with Routing
-────────────────────────────*/
+/** Main App Component */
 function App() {
   return (
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/agent/dashboard" element={<Dashboard />} />
           <Route path="/agent/clients" element={<ClientManagement />} />
           <Route path="/agent/chats" element={<ChatWithClient />} />

@@ -2,19 +2,13 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { Authenticator } from '@aws-amplify/ui-react';
-import { Amplify } from "aws-amplify";
-import outputs from "../amplify_outputs.json";
 
-import '@aws-amplify/ui-react/styles.css';
-
-Amplify.configure(outputs);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-   
+
   <React.StrictMode>
-    <Authenticator>
+    <div style={{display: 'flex', height: '100%', width: '100%'}}>
       <App />
-    </Authenticator>
+    </div>
   </React.StrictMode>
 );
