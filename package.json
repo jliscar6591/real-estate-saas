@@ -2,6 +2,7 @@
   "name": "amplify-vite-react-template",
   "private": true,
   "version": "0.0.0",
+  "proxy": "http://localhost:4000",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,6 +19,11 @@
     "@mui/joy": "^5.0.0-beta.51",
     "@mui/material": "^6.4.5",
     "aws-amplify": "^6.13.1",
+    "axios": "^1.8.1",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "puppeteer": "^24.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.2.0"

@@ -184,6 +184,7 @@ export default function ChatWithClient() {
           <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <Box sx={{ p: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
               <TextField
+              size="small"
                 fullWidth
                 placeholder="Search chats..."
                 value={searchText}
